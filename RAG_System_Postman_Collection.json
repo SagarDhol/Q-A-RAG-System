@@ -1,0 +1,327 @@
+{
+  "info": {
+    "name": "RAG System API",
+    "description": "Postman collection for the RAG-Powered Q&A System API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "API Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": [""]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Upload Document",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/path/to/your/document.pdf"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8000/upload",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["upload"]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/document.pdf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8000/upload",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["upload"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"status\": \"success\",\n    \"message\": \"File handbook.pdf uploaded successfully\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Ingest Documents",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/ingest",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["ingest"]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/ingest",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["ingest"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"status\": \"success\",\n    \"chunks_processed\": 42,\n    \"total_vectors\": 42\n}"
+        }
+      ]
+    },
+    {
+      "name": "List Documents",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/documents",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["documents"]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/documents",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["documents"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"status\": \"success\",\n    \"documents\": [\n        {\n            \"name\": \"handbook.pdf\",\n            \"size\": 1024000,\n            \"modified\": 1640995200\n        }\n    ],\n    \"count\": 1\n}"
+        }
+      ]
+    },
+    {
+      "name": "Query (Simple)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/query?question=What is the company policy on remote work?&top_k=3",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["query"],
+          "query": [
+            {
+              "key": "question",
+              "value": "What is the company policy on remote work?",
+              "description": "The question to ask the RAG system"
+            },
+            {
+              "key": "top_k",
+              "value": "3",
+              "description": "Number of relevant chunks to retrieve (optional)"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/query?question=What%20is%20the%20company%20policy%20on%20remote%20work%3F&top_k=3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["query"],
+              "query": [
+                {
+                  "key": "question",
+                  "value": "What is the company policy on remote work?",
+                  "description": "The question to ask the RAG system"
+                },
+                {
+                  "key": "top_k",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"question\": \"What is the company policy on remote work?\",\n    \"answer\": \"The company allows employees to work remotely for up to 3 days per week, with manager approval. Full-time remote work may be arranged on a case-by-case basis.\",\n    \"sources\": [\n        {\n            \"document\": \"employee_handbook.pdf\",\n            \"score\": 0.87,\n            \"text\": \"Remote Work Policy: Employees may work remotely for up to 3 days per week with manager approval. Full-time remote arrangements require VP approval...\"\n        },\n        {\n            \"document\": \"employee_handbook.pdf\",\n            \"score\": 0.82,\n            \"text\": \"Work Arrangements: The company supports flexible work arrangements including remote work, flexible hours, and compressed workweeks...\"\n        }\n    ],\n    \"timestamp\": \"2026-01-08T03:08:00.000000\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Query (Structured)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "question",
+              "value": "What is the company policy on remote work?",
+              "type": "text"
+            },
+            {
+              "key": "response_format",
+              "value": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"answer\": {\n      \"type\": \"string\",\n      \"description\": \"The answer to the question\"\n    },\n    \"policy_name\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the policy being referenced\"\n    },\n    \"applies_to\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Who this policy applies to\"\n    },\n    \"requires_approval\": {\n      \"type\": \"boolean\",\n      \"description\": \"Whether this policy requires approval\"\n    }\n  },\n  \"required\": [\n    \"answer\",\n    \"policy_name\"\n  ]\n}",
+              "type": "text"
+            },
+            {
+              "key": "top_k",
+              "value": "3",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8000/query_structured",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["query_structured"]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "question",
+                  "value": "What is the company policy on remote work?",
+                  "type": "text"
+                },
+                {
+                  "key": "response_format",
+                  "value": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"answer\": {\n      \"type\": \"string\",\n      \"description\": \"The answer to the question\"\n    },\n    \"policy_name\": {\n      \"type\": \"string\",\n      \"description\": \"The name of the policy being referenced\"\n    },\n    \"applies_to\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Who this policy applies to\"\n    },\n    \"requires_approval\": {\n      \"type\": \"boolean\",\n      \"description\": \"Whether this policy requires approval\"\n    }\n  },\n  \"required\": [\n    \"answer\",\n    \"policy_name\"\n  ]\n}",
+                  "type": "text"
+                },
+                {
+                  "key": "top_k",
+                  "value": "3"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8000/query_structured",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["query_structured"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"question\": \"What is the company policy on remote work?\",\n    \"answer\": {\n        \"answer\": \"The company allows employees to work remotely for up to 3 days per week with manager approval. Full-time remote work may be arranged on a case-by-case basis.\",\n        \"policy_name\": \"Flexible Work Arrangement Policy\",\n        \"applies_to\": [\n            \"All full-time employees\",\n            \"Contractors (case by case basis)\"\n        ],\n        \"requires_approval\": true\n    },\n    \"sources\": [\n        {\n            \"document\": \"employee_handbook.pdf\",\n            \"score\": 0.87,\n            \"text\": \"Remote Work Policy: Employees may work remotely for up to 3 days per week with manager approval. Full-time remote arrangements require VP approval...\"\n        },\n        {\n            \"document\": \"employee_handbook.pdf\",\n            \"score\": 0.82,\n            \"text\": \"Work Arrangements: The company supports flexible work arrangements including remote work, flexible hours, and compressed workweeks...\"\n        }\n    ],\n    \"timestamp\": \"2026-01-08T03:10:00.000000\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Clear Index",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/clear",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["clear"]
+        }
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/clear",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["clear"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "body": "{\n    \"status\": \"success\",\n    \"message\": \"Vector store index cleared\"\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}
