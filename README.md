@@ -300,3 +300,33 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+
+
+
+
+
+
+
+ollama — Runs and manages local LLMs (like LLaMA, Mistral) via a simple local API.
+
+faiss-cpu — High-performance vector similarity search library for fast embeddings retrieval.
+
+sentence-transformers — Generates dense vector embeddings for sentences and documents.
+
+numpy — Core library for numerical computing and efficient array operations.
+
+python-dotenv — Loads environment variables from .env files into the application.
+
+tqdm — Displays fast, customizable progress bars for loops and tasks.
+
+colorama — Adds cross-platform colored text to terminal output.
+
+pydantic — Provides data validation and serialization using Python type hints.
+
+fastapi — High-performance web framework for building APIs with automatic docs.
+
+uvicorn — ASGI server for running FastAPI and other async Python apps.
+
+python-multipart — Enables handling file uploads and form data in FastAPI.

@@ -1,0 +1,36 @@
+Staffing Details – Current Openings for Client
+
+We are currently partnering with our client to support their growth by hiring skilled professionals across multiple domains. Below is a snapshot of current openings, required skills, and experience levels.
+
+1. Senior Backend Engineer
+Openings: 2
+Experience: 5–8 years
+Skills: Node.js, Express, MongoDB, REST APIs, Microservices, AWS
+
+2. Full Stack Developer
+Openings: 3
+Experience: 4–7 years
+Skills: React.js, Node.js, SQL/NoSQL, CI/CD, Docker
+
+3. Data Engineer
+Openings: 2
+Experience: 3–6 years
+Skills: Python, SQL, ETL pipelines, AWS/GCP, Spark/BigQuery
+
+4. Machine Learning Engineer
+Openings: 1
+Experience: 4–7 years
+Skills: Python, TensorFlow/PyTorch, NLP/Computer Vision, Docker
+
+5. UI/UX Designer
+Openings: 1
+Experience: 3–5 years
+Skills: Figma/Adobe XD, User Research, Prototyping
+
+General Requirements
+Strong communication and collaboration skills
+Agile/Scrum experience
+Problem-solving mindset
+
+Work Location: Remote / Hybrid / On-site
+Benefits: Competitive salary, health insurance, training, flexible work options
