@@ -128,7 +128,6 @@ class RAGSystem:
         return {
             "question": question,
             "answer": answer.strip(),
-            "sources": sources,
             "timestamp": datetime.utcnow().isoformat()
         }
     
