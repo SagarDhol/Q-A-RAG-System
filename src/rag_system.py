@@ -75,15 +75,21 @@ class RAGSystem:
             "total_vectors": self.vector_store.index.ntotal
         }
     
-    def query(self, question: str, top_k: int = None) -> Dict[str, Any]:
+    def query(self, question: str, top_k: int = None, stream: bool = False):
         """Query the RAG system with a question.
         
         Args:
             question: The question to ask
             top_k: Number of relevant chunks to retrieve (defaults to settings.TOP_K_RESULTS)
+            stream: Whether to stream the response
+            
+        Yields:
+            str: Chunks of the generated response if streaming
             
         Returns:
-            Dictionary containing the answer and relevant context
+            Union[Dict[str, Any], Generator[str, None, None]]: 
+                - If not streaming: Dictionary containing the answer and relevant context
+                - If streaming: Generator yielding chunks of the response
         """
         if top_k is None:
             top_k = settings.TOP_K_RESULTS
@@ -100,36 +106,70 @@ class RAGSystem:
             for i, chunk in enumerate(relevant_chunks)
         )
         
-        # Generate prompt
-        prompt = f"""You are a helpful assistant that answers questions based on the provided context.
+        # Generate prompt with more explicit instructions
+        prompt = f"""### INSTRUCTIONS ###
+        You are an AI assistant that provides direct, factual answers based on the provided context.
         
-        Context:
+        RULES:
+        1. Answer ONLY with the specific information requested in the question.
+        2. If the question asks for a list, provide a bulleted list.
+        3. If the question asks for a number, provide just the number.
+        4. If the question is a yes/no question, answer with just "Yes" or "No".
+        5. If the context doesn't contain the answer, respond with "I don't know".
+        6. Do not include any explanations, justifications, or references to the context.
+        7. Be as concise as possible.
+        
+        ### CONTEXT ###
         {context}
         
-        Question: {question}
+        ### QUESTION ###
+        {question}
         
-        Answer the question based on the context above. If the context doesn't contain the answer, say "I don't have enough information to answer this question."
+        ### ANSWER ###
+        """
         
-        Provide a concise and accurate answer:"""
-        
-        # Generate response
-        answer = self.llm.generate(prompt)
-        
-        # Prepare sources
-        sources = [
-            {
-                "document": chunk.get("document_name", "Unknown"),
-                "score": chunk.get("score", 0.0),
-                "text": chunk.get("text", "")[:200] + "..."  # Truncate long texts
+        if stream:
+            # For streaming, yield each chunk as it's generated
+            full_response = ""
+            for chunk in self.llm.generate(prompt, stream=True):
+                full_response += chunk
+                yield chunk
+                
+            # After streaming is complete, you can return metadata if needed
+            # This won't be used in the streaming case, but we keep it for consistency
+            return {
+                "question": question,
+                "answer": full_response.strip(),
+                "sources": [
+                    {
+                        "document": chunk.get("document_name", "Unknown"),
+                        "score": chunk.get("score", 0.0),
+                        "text": chunk.get("text", "")[:200] + "..."
+                    }
+                    for chunk in relevant_chunks
+                ],
+                "timestamp": datetime.utcnow().isoformat()
             }
-            for chunk in relevant_chunks
-        ]
-        
-        return {
-            "question": question,
-            "answer": answer.strip(),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        else:
+            # Non-streaming behavior remains the same
+            answer = self.llm.generate(prompt, stream=False)
+            
+            # Prepare sources
+            sources = [
+                {
+                    "document": chunk.get("document_name", "Unknown"),
+                    "score": chunk.get("score", 0.0),
+                    "text": chunk.get("text", "")[:200] + "..."
+                }
+                for chunk in relevant_chunks
+            ]
+            
+            return {
+                "question": question,
+                "answer": answer.strip(),
+                "sources": sources,
+                "timestamp": datetime.utcnow().isoformat()
+            }
     
     def query_structured(
         self, 

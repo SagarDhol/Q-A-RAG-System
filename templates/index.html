@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System - ChatGPT-like</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #343541;
+            --secondary: #40414f;
+            --accent: #10a37f;
+            --text-primary: #fff;
+            --text-secondary: #d1d5db;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        
+        .message {
+            animation: fadeIn 0.3s ease-in-out;
+            max-width: 48rem;
+            margin: 0 auto;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .file-upload {
+            border: 2px dashed var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .file-upload:hover {
+            border-color: var(--accent);
+            background-color: rgba(16, 163, 127, 0.1);
+        }
+        
+        .btn-primary {
+            background-color: var(--accent);
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0d8a6a;
+        }
+        
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+            background-color: #202123;
+            width: 260px;
+        }
+        
+        .chat-input {
+            background-color: #40414f;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        
+        .send-button {
+            background-color: #19c37d;
+        }
+        
+        .send-button:hover {
+            background-color: #1a7f64;
+        }
+        
+        .send-button:disabled {
+            background-color: #1f2937;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                z-index: 50;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+            
+            .overlay.open {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <div class="sidebar text-gray-200 flex-shrink-0 overflow-y-auto h-full">
+        <div class="p-4">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-xl font-semibold">RAG System</h1>
+                <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- New Chat Button -->
+            <button id="newChatBtn" class="w-full flex items-center justify-center gap-2 p-3 rounded-md border border-gray-600 hover:bg-gray-700 mb-4">
+                <i class="ri-add-line"></i>
+                <span>New Chat</span>
+            </button>
+            
+            <!-- File Upload Section -->
+            <div class="mb-6">
+                <h2 class="text-sm font-medium text-gray-400 mb-2">Upload Documents</h2>
+                <div class="file-upload p-4 rounded-md text-center cursor-pointer mb-3" id="fileUpload">
+                    <input type="file" id="fileInput" class="hidden" multiple accept=".txt,.pdf,.docx">
+                    <i class="ri-upload-cloud-2-line text-3xl mb-2 text-gray-400"></i>
+                    <p class="text-sm text-gray-300">Click to upload or drag and drop</p>
+                    <p class="text-xs text-gray-500 mt-1">Supports: .txt, .pdf, .docx</p>
+                </div>
+                <button id="ingestBtn" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md flex items-center justify-center gap-2">
+                    <i class="ri-database-2-line"></i>
+                    <span>Process Documents</span>
+                </button>
+            </div>
+            
+            <!-- Chat History -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-medium text-gray-400">Chat History</h2>
+                    <button id="clearHistoryBtn" class="text-xs text-gray-500 hover:text-white">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+                <div id="chatHistory" class="space-y-1">
+                    <!-- Chat history items will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay for mobile -->
+    <div id="overlay" class="overlay"></div>
+    
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+            <button id="menuBtn" class="md:hidden text-gray-300 hover:text-white">
+                <i class="ri-menu-line text-xl"></i>
+            </button>
+            <h1 class="text-lg font-semibold">RAG Q&A System</h1>
+            <div class="w-6"></div> <!-- For alignment -->
+        </header>
+        
+        <!-- Chat Container -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- Welcome Message -->
+            <div class="max-w-3xl mx-auto text-center mt-10">
+                <h2 class="text-3xl font-bold mb-4">How can I help you today?</h2>
+                <p class="text-gray-400">Ask me anything or upload documents to get started.</p>
+            </div>
+            
+            <!-- Messages will be added here -->
+        </div>
+        
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-700 bg-gray-800">
+            <form id="chatForm" class="max-w-3xl mx-auto">
+                <div class="relative">
+                    <textarea 
+                        id="userInput" 
+                        rows="1" 
+                        class="w-full bg-gray-700 text-white rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" 
+                        placeholder="Message RAG System..."
+                    ></textarea>
+                    <button 
+                        type="submit" 
+                        id="sendBtn" 
+                        class="absolute right-2 bottom-2 p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-600"
+                        disabled
+                    >
+                        <i class="ri-send-plane-fill text-xl"></i>
+                    </button>
+                </div>
+            </form>
+            <p class="text-xs text-center text-gray-500 mt-2">
+                RAG System may produce inaccurate information. Please verify important facts.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const chatContainer = document.getElementById('chatContainer');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const closeSidebar = document.getElementById('closeSidebar');
+        const overlay = document.getElementById('overlay');
+        const sidebar = document.querySelector('.sidebar');
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+        const ingestBtn = document.getElementById('ingestBtn');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const chatHistory = document.getElementById('chatHistory');
+        
+        // State
+        let isProcessing = false;
+        
+        // Event Listeners
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            overlay.classList.add('open');
+        });
+        
+        closeSidebar.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+        
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+        
+        // Toggle send button based on input
+        userInput.addEventListener('input', () => {
+            sendBtn.disabled = userInput.value.trim() === '';
+            
+            // Auto-resize textarea
+            userInput.style.height = 'auto';
+            userInput.style.height = userInput.scrollHeight + 'px';
+        });
+        
+        // Handle form submission with streaming
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const question = userInput.value.trim();
+            if (!question || isProcessing) return;
+            
+            // Add user message to chat
+            addMessage('user', question);
+            userInput.value = '';
+            
+            // Show typing indicator
+            const typingId = showTypingIndicator();
+            isProcessing = true;
+            updateUIForProcessing(true);
+            
+            // Add assistant message container (initially empty)
+            const messageId = 'msg-' + Date.now();
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = 'message mb-4 flex items-start';
+            messageDiv.innerHTML = `
+                <div class="flex-shrink-0 mr-3">
+                    <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+                        <i class="ri-robot-2-line text-white"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium text-gray-300 mb-1">Assistant</div>
+                    <div class="text-gray-200 whitespace-pre-wrap" id="${messageId}-content">
+                        <div class="typing-indicator flex items-center h-6" id="${typingId}">
+                            <span></span>
+                            <span class="ml-1"></span>
+                            <span class="ml-1"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            try {
+                // Use the streaming endpoint
+                const response = await fetch('/query/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
+                
+                // Process the stream
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    // Decode the chunk
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6); // Remove 'data: ' prefix
+                            if (data === '[DONE]') {
+                                // End of stream
+                                continue;
+                            }
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.error) {
+                                    throw new Error(parsed.error);
+                                }
+                                
+                                // Append the new text to the message
+                                assistantMessage += parsed.text || '';
+                                
+                                // Update the message content
+                                const contentDiv = document.getElementById(`${messageId}-content`);
+                                if (contentDiv) {
+                                    contentDiv.innerHTML = assistantMessage.replace(/\n/g, '<br>');
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                                
+                            } catch (e) {
+                                console.error('Error parsing SSE data:', e);
+                            }
+                        }
+                    }
+                }
+                
+                // Remove typing indicator
+                const typingElement = document.getElementById(typingId);
+                if (typingElement) {
+                    typingElement.remove();
+                }
+                
+                // Add to chat history
+                addToChatHistory(question, assistantMessage);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error processing your request', 'error');
+                
+                // Update the message with error
+                const contentDiv = document.getElementById(`${messageId}-content`);
+                if (contentDiv) {
+                    contentDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+                }
+                
+                // Remove typing indicator
+                const typingElement = document.getElementById(typingId);
+                if (typingElement) {
+                    typingElement.remove();
+                }
+            } finally {
+                isProcessing = false;
+                updateUIForProcessing(false);
+            }
+        });
+        
+        // File upload handling
+        fileUpload.addEventListener('click', () => fileInput.click());
+        
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('border-green-500', 'bg-gray-800');
+        });
+        
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('border-green-500', 'bg-gray-800');
+        });
+        
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('border-green-500', 'bg-gray-800');
+            
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload();
+            }
+        });
+        
+        fileInput.addEventListener('change', handleFileUpload);
+        
+        // Handle file upload
+        async function handleFileUpload() {
+            const files = fileInput.files;
+            if (!files || files.length === 0) return;
+            
+            isProcessing = true;
+            updateUIForProcessing(true);
+            
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('file', files[i]);
+            }
+            
+            try {
+                // Upload files
+                const uploadResponse = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!uploadResponse.ok) {
+                    throw new Error(`Upload failed: ${uploadResponse.status}`);
+                }
+                
+                const uploadResult = await uploadResponse.json();
+                showToast('Files uploaded successfully', 'success');
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Error uploading files', 'error');
+            } finally {
+                isProcessing = false;
+                updateUIForProcessing(false);
+                fileInput.value = ''; // Reset file input
+            }
+        }
+        
+        // Ingest documents
+        ingestBtn.addEventListener('click', async () => {
+            if (isProcessing) return;
+            
+            isProcessing = true;
+            updateUIForProcessing(true);
+            
+            try {
+                const response = await fetch('/ingest', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Documents processed successfully!', 'success');
+                    // Enable the chat input after successful ingestion
+                    userInput.disabled = false;
+                    userInput.placeholder = 'Message RAG System...';
+                } else {
+                    throw new Error(result.error || 'Failed to process documents');
+                }
+                
+            } catch (error) {
+                console.error('Ingest error:', error);
+                showToast(error.message || 'Error processing documents', 'error');
+            } finally {
+                isProcessing = false;
+                updateUIForProcessing(false);
+            }
+        });
+        
+        // New chat
+        newChatBtn.addEventListener('click', () => {
+            // Clear the chat container except for the welcome message
+            const welcomeMessage = chatContainer.querySelector('.max-w-3xl.mx-auto.text-center.mt-10');
+            chatContainer.innerHTML = '';
+            if (welcomeMessage) {
+                chatContainer.appendChild(welcomeMessage);
+            }
+            
+            // Reset the input
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            sendBtn.disabled = true;
+        });
+        
+        // Clear history
+        clearHistoryBtn.addEventListener('click', () => {
+            // Clear chat history from UI
+            chatHistory.innerHTML = '';
+            // Here you would also clear the history from local storage or backend
+            showToast('Chat history cleared', 'info');
+        });
+        
+        // Helper functions
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role === 'user' ? 'bg-gray-800' : 'bg-gray-700'} py-6 px-4`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'max-w-3xl mx-auto flex items-start gap-4';
+            
+            const avatar = document.createElement('div');
+            avatar.className = `w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                role === 'user' ? 'bg-green-600' : 'bg-purple-600'
+            }`;
+            avatar.innerHTML = role === 'user' ? '<i class="ri-user-line"></i>' : '<i class="ri-robot-2-line"></i>';
+            
+            const text = document.createElement('div');
+            text.className = 'prose prose-invert max-w-none';
+            text.textContent = content;
+            
+            messageContent.appendChild(avatar);
+            messageContent.appendChild(text);
+            messageDiv.appendChild(messageContent);
+            
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to the bottom of the chat
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Add to chat history if it's a user message
+            if (role === 'user') {
+                addToChatHistory(content);
+            }
+        }
+        
+        function addToChatHistory(content) {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'p-2 text-sm text-gray-300 hover:bg-gray-700 rounded cursor-pointer truncate';
+            historyItem.innerHTML = `
+                <i class="ri-message-2-line mr-2"></i>
+                <span>${content.length > 30 ? content.substring(0, 30) + '...' : content}</span>
+            `;
+            
+            // Add click handler to load chat history
+            historyItem.addEventListener('click', () => {
+                // Clear current chat
+                const welcomeMessage = chatContainer.querySelector('.max-w-3xl.mx-auto.text-center.mt-10');
+                chatContainer.innerHTML = '';
+                if (welcomeMessage) {
+                    chatContainer.appendChild(welcomeMessage);
+                }
+                
+                // Add the selected message
+                addMessage('user', content);
+                
+                // Close sidebar on mobile
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('open');
+                }
+            });
+            
+            chatHistory.insertBefore(historyItem, chatHistory.firstChild);
+        }
+        
+        function showTypingIndicator() {
+            const typingId = 'typing-' + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = 'message bg-gray-700 py-6 px-4';
+            
+            const typingContent = document.createElement('div');
+            typingContent.className = 'max-w-3xl mx-auto flex items-start gap-4';
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0';
+            avatar.innerHTML = '<i class="ri-robot-2-line"></i>';
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator flex items-center h-8';
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            
+            typingContent.appendChild(avatar);
+            typingContent.appendChild(indicator);
+            typingDiv.appendChild(typingContent);
+            
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return typingId;
+        }
+        
+        function removeTypingIndicator(id) {
+            const typingElement = document.getElementById(id);
+            if (typingElement) {
+                typingElement.remove();
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-md text-white ${
+                type === 'success' ? 'bg-green-600' : 
+                type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            } shadow-lg z-50`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        function updateUIForProcessing(processing) {
+            const buttons = [ingestBtn, sendBtn, fileUpload];
+            buttons.forEach(btn => {
+                if (btn) {
+                    btn.disabled = processing;
+                    if (btn.classList) {
+                        processing 
+                            ? btn.classList.add('opacity-50', 'cursor-not-allowed')
+                            : btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+            });
+            
+            if (processing) {
+                const originalText = ingestBtn.innerHTML;
+                ingestBtn.setAttribute('data-original-text', originalText);
+                ingestBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Processing...';
+            } else {
+                const originalText = ingestBtn.getAttribute('data-original-text') || 
+                    '<i class="ri-database-2-line"></i> Process Documents';
+                ingestBtn.innerHTML = originalText;
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Disable chat input until documents are ingested
+            userInput.disabled = true;
+            userInput.placeholder = 'Please upload and process documents first';
+            
+            // Initialize any other UI elements
+        });
+    </script>
+</body>
+</html>

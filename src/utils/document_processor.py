@@ -30,7 +30,7 @@ class DocumentProcessor:
             return f.read()
     
     def split_into_chunks(self, text: str) -> List[Dict[str, Any]]:
-        """Split text into chunks with metadata.
+        """Split text into chunks with metadata, preserving context and structure.
         
         Args:
             text: The text to split into chunks
@@ -41,23 +41,20 @@ class DocumentProcessor:
         if not text.strip():
             return []
         
-        # Simple sentence splitting on common sentence boundaries
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        # First, split by double newlines to preserve paragraphs
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         
         chunks = []
         current_chunk = []
         current_length = 0
         
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-                
-            sentence_length = len(sentence)
+        for paragraph in paragraphs:
+            # If paragraph is a heading or title (ends with a colon or is in all caps)
+            is_heading = paragraph.endswith(':') or (len(paragraph) < 100 and paragraph.isupper())
             
-            # If adding this sentence would exceed the chunk size, finalize the current chunk
-            if current_chunk and current_length + sentence_length > self.chunk_size:
-                chunk_text = ' '.join(current_chunk)
+            # If adding this paragraph would exceed chunk size, finalize current chunk
+            if current_chunk and current_length + len(paragraph) > self.chunk_size:
+                chunk_text = '\n\n'.join(current_chunk)
                 chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
                 chunks.append({
                     'text': chunk_text,
@@ -65,17 +62,38 @@ class DocumentProcessor:
                     'length': len(chunk_text)
                 })
                 
-                # Start a new chunk with overlap
-                overlap_start = max(0, len(current_chunk) - self.chunk_overlap // 20)  # Approximate word count
-                current_chunk = current_chunk[overlap_start:]
-                current_length = sum(len(s) + 1 for s in current_chunk)  # +1 for spaces
+                # Start a new chunk with overlap (last paragraph or two)
+                overlap_paragraphs = min(2, len(current_chunk))
+                current_chunk = current_chunk[-overlap_paragraphs:]
+                current_length = sum(len(p) + 2 for p in current_chunk)  # +2 for newlines
             
-            current_chunk.append(sentence)
-            current_length += sentence_length + 1  # +1 for space
+            # Add paragraph to current chunk
+            current_chunk.append(paragraph)
+            current_length += len(paragraph) + 2  # +2 for newlines
+            
+            # If this is a heading, ensure it's at the start of a chunk
+            if is_heading and len(current_chunk) > 1:
+                # Move the heading to the next chunk
+                heading = current_chunk.pop()
+                current_length -= len(heading) + 2
+                
+                # Finalize current chunk if not empty
+                if current_chunk:
+                    chunk_text = '\n\n'.join(current_chunk)
+                    chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
+                    chunks.append({
+                        'text': chunk_text,
+                        'chunk_id': chunk_id,
+                        'length': len(chunk_text)
+                    })
+                
+                # Start new chunk with the heading
+                current_chunk = [heading]
+                current_length = len(heading)
         
         # Add the last chunk if not empty
         if current_chunk:
-            chunk_text = ' '.join(current_chunk)
+            chunk_text = '\n\n'.join(current_chunk)
             chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
             chunks.append({
                 'text': chunk_text,
@@ -83,7 +101,46 @@ class DocumentProcessor:
                 'length': len(chunk_text)
             })
         
-        return chunks
+        # Post-process to ensure no chunk is too large
+        final_chunks = []
+        for chunk in chunks:
+            if chunk['length'] <= self.chunk_size:
+                final_chunks.append(chunk)
+            else:
+                # If a chunk is still too large, split by sentences
+                sentences = re.split(r'(?<=[.!?])\s+', chunk['text'])
+                current_chunk = []
+                current_length = 0
+                
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if not sentence:
+                        continue
+                        
+                    if current_chunk and current_length + len(sentence) > self.chunk_size:
+                        chunk_text = ' '.join(current_chunk)
+                        chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
+                        final_chunks.append({
+                            'text': chunk_text,
+                            'chunk_id': chunk_id,
+                            'length': len(chunk_text)
+                        })
+                        current_chunk = []
+                        current_length = 0
+                        
+                    current_chunk.append(sentence)
+                    current_length += len(sentence) + 1
+                
+                if current_chunk:
+                    chunk_text = ' '.join(current_chunk)
+                    chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
+                    final_chunks.append({
+                        'text': chunk_text,
+                        'chunk_id': chunk_id,
+                        'length': len(chunk_text)
+                    })
+        
+        return final_chunks
     
     def process_document(self, file_path: Path) -> List[Dict[str, Any]]:
         """Process a document file into chunks with metadata.

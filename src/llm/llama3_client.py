@@ -7,15 +7,38 @@ class Llama3Client:
         """Initialize the Llama3 client."""
         self.model_name = model_name
         
-    def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text from a prompt."""
-        response = ollama.generate(
-            model=self.model_name,
-            prompt=prompt,
-            stream=False,
-            **kwargs
-        )
-        return response['response']
+    def generate(self, prompt: str, stream: bool = False, **kwargs):
+        """Generate text from a prompt.
+        
+        Args:
+            prompt: The prompt to generate text from
+            stream: Whether to stream the response
+            **kwargs: Additional arguments to pass to the model
+            
+        Yields:
+            str: The generated text chunks if streaming
+            
+        Returns:
+            str: The complete generated text if not streaming
+        """
+        if stream:
+            response = ollama.generate(
+                model=self.model_name,
+                prompt=prompt,
+                stream=True,
+                **kwargs
+            )
+            for chunk in response:
+                if 'response' in chunk:
+                    yield chunk['response']
+        else:
+            response = ollama.generate(
+                model=self.model_name,
+                prompt=prompt,
+                stream=False,
+                **kwargs
+            )
+            return response['response']
     
     def generate_structured(self, prompt: str, response_format: Dict[str, Any]) -> Dict[str, Any]:
         """Generate structured output based on the response format."""
